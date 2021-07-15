@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
+    <default>
+        <payment>
+            <easynolo_bancasellapro>
+                <url_live_wsdl>https://ecomms2s.sella.it/gestpay/gestpayws/WSCryptDecrypt.asmx?WSDL</url_live_wsdl>
+                <url_test_wsdl>https://sandbox.gestpay.net/gestpay/gestpayws/WSCryptDecrypt.asmx?WSDL</url_test_wsdl>
+            </easynolo_bancasellapro>
+        </payment>
+    </default>
+</config>

@@ -1,0 +1,26 @@
+{
+  "name": "dnafactory/module-bancasella-pro-iframe",
+  "type": "magento2-module",
+  "description": "Integrazione iFrame BancaSellaPRO",
+  "license": [
+      "BSD-3-Clause"
+  ],
+  "require": {
+      "php": ">=5.4.0",
+      "easynolo/axerve-ecommerce-solutions": ">=2.5.9"
+  },
+  "authors": [
+    {
+      "name": "Daniel Russo",
+      "email": "daniel@dnafactory.it",
+      "role": "Developer"
+    }
+  ],
+  "autoload": {
+    "files": [ "registration.php" ],
+    "psr-4": {
+      "DNAFactory\\BancaSellaProIframe\\": ""
+    }
+  }
+}
+
