@@ -21,6 +21,7 @@ class Iframe extends Template
         array $data = []
     ) {
         parent::__construct($context, $data);
+
         $this->axerveConfiguration = $axerveConfiguration;
         $this->request = $request;
         $this->cookieManager = $cookieManager;
@@ -56,7 +57,7 @@ class Iframe extends Template
 
     public function getShopLogin()
     {
-        return $this->cookieManager->getCookie('shopLogin', $this->axerveConfiguration->getMerchantId());
+        return $this->axerveConfiguration->getMerchantId();
     }
 
     public function getEncodingString()
@@ -74,5 +75,10 @@ class Iframe extends Template
         $this->cookieManager->deleteCookie('encString');
         $this->cookieManager->deleteCookie('TransKey');
         $this->cookieManager->deleteCookie('shopLogin');
+    }
+
+    public function getResponseUrl()
+    {
+        return $this->getUrl('bancasellaproiframe/iframe/response');
     }
 }

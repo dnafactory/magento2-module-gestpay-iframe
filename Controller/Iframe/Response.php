@@ -14,7 +14,7 @@ use Magento\Sales\Api\OrderRepositoryInterface;
 use Magento\Framework\Stdlib\Cookie\CookieMetadataFactory;
 use Magento\Framework\Session\SessionManagerInterface;
 
-class Index extends Action implements HttpGetActionInterface, HttpPostActionInterface
+class Response extends Action implements HttpGetActionInterface, HttpPostActionInterface
 {
     protected CookieManagerInterface $cookieManager;
     protected AxerveConfigurationInterface $axerveConfiguration;
@@ -49,87 +49,40 @@ class Index extends Action implements HttpGetActionInterface, HttpPostActionInte
             return $this->redirectError(__("Axerve disabled"));
         }
 
-        $pares = $this->getRequest()->getParam('PaRes', null);
-        if (strlen($pares) > 0) {
-            return $this->redirectToPayment();
-        } else {
-            $this->cleanCookie();
-        }
-
-        $orderId = $this->getRequest()->getParam('order_id', null);
-        if (!$orderId) {
-            return $this->redirectError(__("Empty Order ID"));
-        }
-
-        $order = $this->orderRepository->get($orderId);
-        if (!$order || !$order->getEntityId()) {
-            return $this->redirectError("Wrong Order ID");
-        }
-
-        // solo pending, solo gestpay
-        if (!$order->getPayment() || $order->getPayment()->getMethod() !== 'easynolo_bancasellapro') {
-            return $this->redirectError("Wrong Payment Method");
-        }
-
-        if ($order->getPayment()->getBaseAmountPaid() > 0) {
-            return $this->redirectError("Order already Paid");
+        $cryptedString = $this->getRequest()->getParam('crypted_string', null);
+        if (!$cryptedString) {
+            return $this->redirectError(__("Empty Encripted String"));
         }
 
         $shopLogin = $this->axerveConfiguration->getMerchantId();
         $wsdl = $this->axerveConfiguration->getUrlWsdl();
-        $shopTransactionId = $order->getIncrementId();
-
-        ///////////////////////
-        /// PZ8
-        /// baseGrandTotal refer to base currency
-        /// workaround to avoid currency mapping
-        ///
-        $amount = $order->getBaseGrandTotal();
-        $amount = number_format($amount, 2);
-        $currency = $this->axerveConfiguration->getCurrency();
-        ///
-        ///////////////////////
 
         $client = new \SoapClient($wsdl, ['exceptions' => true]);
 
         $params = [
             'shopLogin' => $shopLogin,
-            'uicCode' => $currency,
-            'amount' => $amount,
-            'shopTransactionId' => $shopTransactionId
+            'CryptedString' => $cryptedString
         ];
+
         try {
-            $response = $client->Encrypt($params);
+            $response = $client->Decrypt($params);
         } catch (\SoapFault $e) {
             return $this->redirectError($e->faultstring);
         } catch (\Exception $e) {
             return $this->redirectError($e->getMessage());
         }
 
-        $result = simplexml_load_string($response->EncryptResult->any);
+        $result = simplexml_load_string($response->DecryptResult->any);
+
         $errCode = (string) $result->ErrorCode;
-        $errDesc = (string) $result->ErrorDescription;
+        $errorDescription = (string) $result->ErrorDescription;
 
-        // Don't force triple check (===), never trust
-        if ($errCode == '0') {
-            $encString = (string) $result->CryptDecryptString;
-
-            $metadata = $this->cookieMetadataFactory
-                ->createPublicCookieMetadata()
-                ->setDuration(86400)
-                ->setPath($this->sessionManager->getCookiePath())
-                ->setDomain($this->sessionManager->getCookieDomain());
-
-            $this->cookieManager->setPublicCookie(
-                'encString',
-                $encString,
-                $metadata
-            );
-
-            return $this->redirectToPayment();
+        if ($errCode != "0") {
+            $this->redirectError($errorDescription);
         }
 
-        return $this->redirectError($errDesc);
+        $this->cleanCookie();
+        return $this->redirectSuccess();
     }
 
     protected function cleanCookie()
@@ -151,12 +104,12 @@ class Index extends Action implements HttpGetActionInterface, HttpPostActionInte
         return $redirect;
     }
 
-    protected function redirectToPayment()
+    protected function redirectSuccess()
     {
         $redirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
         $redirect->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0', true);
         $redirect->setHttpResponseCode(302); // Prevent Browser Caching, don't remove
-        $redirect->setUrl('/bancasellaproiframe/iframe/payment');
+        $redirect->setUrl('/bancasellaproiframe/iframe/success');
         return $redirect;
     }
 }
