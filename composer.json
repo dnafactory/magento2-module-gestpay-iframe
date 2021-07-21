@@ -1,7 +1,8 @@
 {
   "name": "dnafactory/module-bancasella-pro-iframe",
   "type": "magento2-module",
-  "description": "Integrazione iFrame BancaSellaPRO",
+    "version": "dev-develop",
+    "description": "Integrazione iFrame BancaSellaPRO",
   "license": [
       "BSD-3-Clause"
   ],
