@@ -1,5 +1,37 @@
-<?php /** @var \DNAFactory\BancaSellaProIframe\Block\Iframe $block */ ?>
-<?php /** @var \Magento\Framework\Escaper $escaper */ ?>
+<?php
+/** @var \DNAFactory\BancaSellaProIframe\Block\Iframe $block */
+/** @var \Magento\Framework\Escaper $escaper */
+$block->validateIframe();
+?>
+
+<style>
+    #maincontent {
+        padding-top: 80px;
+    }
+
+    #InnerFreezePane, #FreezePane {
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        left: 0;
+        top: 0;
+        background: #FFF;
+        z-index: 1200;
+        text-align: center;
+        padding-top: 25%;
+        font-size: 24px;
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+
+    #ErrorBox {
+        background: #ff000036;
+        margin-bottom: 30px;
+        padding: 15px;
+        border-radius: 5px;
+        color: red;
+    }
+</style>
 
 <script type="text/javascript" src="<?= $escaper->escapeUrl($block->getJsScript()); ?>"></script>
 
@@ -16,21 +48,21 @@
             //Handle 3D authentication 2nd call
             var PARes = '<?= $escaper->escapeHtml($block->getPaRes()) ?>';
             if (PARes.length > 0){
-                //The card holder land for the 2nd call after 3d authentication so we can proceed to process the transaction without showing the form
-                document.getElementById('text').innerHTML = 'Payment in progress...';
+                //The card holder land for the 2nd call after 3d authentication so we can pxroceed to process the transaction without showing the form
+                document.getElementById('text').innerHTML = '<?= $escaper->escapeHtml(__('Payment in progress...')) ?>';
                 GestPay.SendPayment({PARes:PARes,TransKey:'<?= $block->getTansKey() ?>'},localObj.PaymentCallBack);
             }else{
-                document.getElementById('InnerFreezePane').className='Off';
-                document.getElementById('FreezePane').className='Off';
-                document.getElementById('CCForm').className='On';
+                document.getElementById('InnerFreezePane').className='d-none';
+                document.getElementById('FreezePane').className='d-none';
+                document.getElementById('CCForm').className='d-block';
             }
         }else{
             //An error has occurred, check the Result.ErrorCode and Result.ErrorDescription
             //place error handle code HERE
             document.getElementById('ErrorBox').innerHTML='Error:' + Result.ErrorCode + ' ' + Result.ErrorDescription;
-            document.getElementById('ErrorBox').className='On';
-            document.getElementById('InnerFreezePane').className = 'Off';
-            document.getElementById('FreezePane').className = 'Off'
+            document.getElementById('ErrorBox').className='d-block';
+            document.getElementById('InnerFreezePane').className = 'd-none';
+            document.getElementById('FreezePane').className = 'd-none'
         }
     }
     //setting up a function to handle payment result
@@ -38,7 +70,7 @@
         if(Result.ErrorCode == 0 ){
             //Transaction correctly processed
             //Decrypt the string to read the Transaction Result
-            document.location.replace('<?= $block->getResponseUrl(); ?>?crypted_string='+ Result.EncryptedString);
+            document.location.replace('<?= $block->getResponseUrl(); ?>?crypted_string='+ Result.EncryptedString+'&form_key=<?= /** @noEscape  */ $block->getFormKey() ?>'+"&o_key=<?= urlencode($block->getOKey()) ?>");
         }else{
             //An error has occurred
             //check for 3D authentication required
@@ -65,37 +97,37 @@
                 document.location.replace(AuthUrl+'?a='+a+'&b='+b+'&c='+c);
             }else{
                 //Hide overlapping layer
-                document.getElementById('InnerFreezePane').className='Off';
-                document.getElementById('FreezePane').className='Off';
+                document.getElementById('InnerFreezePane').className='d-none';
+                document.getElementById('FreezePane').className='d-none';
                 document.getElementById('submit').disabled=false;
                 //Check the ErrorCode and ErrorDescription
                 if(Result.ErrorCode == 1119 || Result.ErrorCode == 1120){
                     document.getElementById('ErrorBox').innerHTML='Error:' + Result.ErrorCode +' - ' + Result.ErrorDescription;
-                    document.getElementById('ErrorBox').className='On';
+                    document.getElementById('ErrorBox').className='d-block';
                     //alert(Result.ErrorDescription);
                     document.getElementById('CC').focus();
                 }
                 if(Result.ErrorCode == 1124 || Result.ErrorCode == 1126){
                     document.getElementById('ErrorBox').innerHTML='Error:' + Result.ErrorCode +' - ' + Result.ErrorDescription;
-                    document.getElementById('ErrorBox').className='On';
+                    document.getElementById('ErrorBox').className='d-block';
                     //alert(Result.ErrorDescription);
                     document.getElementById('EXPMM').focus();
                 }
                 if(Result.ErrorCode == 1125){
                     document.getElementById('ErrorBox').innerHTML='Error:' + Result.ErrorCode +' - ' + Result.ErrorDescription;
-                    document.getElementById('ErrorBox').className='On';
+                    document.getElementById('ErrorBox').className='d-block';
                     //alert(Result.ErrorDescription);
                     document.getElementById('EXPYY').focus();
                 }
                 if(Result.ErrorCode == 1149){
                     document.getElementById('ErrorBox').innerHTML='Error:' + Result.ErrorCode +' - ' + Result.ErrorDescription;
-                    document.getElementById('ErrorBox').className='On';
+                    document.getElementById('ErrorBox').className='d-block';
                     //alert(Result.ErrorDescription);
                     document.getElementById('CVV2').focus();
                 }
                 if(Result.ErrorCode != 1149 || Result.ErrorCode != 1119 || Result.ErrorCode != 1120 || Result.ErrorCode != 1124 || Result.ErrorCode != 1126 || Result.ErrorCode != 1125){
                     document.getElementById('ErrorBox').innerHTML='Error:' + Result.ErrorCode +' - ' + Result.ErrorDescription;
-                    document.getElementById('ErrorBox').className='On';
+                    document.getElementById('ErrorBox').className='d-block';
 
                 }
             }
@@ -110,8 +142,8 @@
         //raise the Overlap layer
         document.getElementById('FreezePane').className='FreezePaneOn';
         //raise the loading message
-        document.getElementById('text').innerHTML = 'Pagamento in corso...';
-        document.getElementById('InnerFreezePane').className='On';
+        document.getElementById('text').innerHTML = '<?= $escaper->escapeHtml(__('Payment in progress...'))  ?>';
+        document.getElementById('InnerFreezePane').className='d-block';
         GestPay.SendPayment ({
             CC : document.getElementById('CC').value,
             EXPMM : document.getElementById('EXPMM').value,
@@ -125,13 +157,11 @@
 </script>
 
 <!-- Overlap Layer -->
-<div id="FreezePane" class="Off"></div>
-<div id="InnerFreezePane" class="Off">
+<div id="FreezePane" class="d-none freeze-popup"></div>
+<div id="InnerFreezePane" class="d-none freeze-popup">
     <div id="text"></div>
 </div>
 <!-- Overlap Layer END -->
-<!-- ErrorBox -->
-<div id="ErrorBox" class="Off">Error</div>
 
 <!-- Create the iFrame-->
 <script type="text/javascript">
@@ -144,35 +174,67 @@
         //raise the Overlap layer
         document.getElementById('FreezePane').className='FreezePaneOn';
         //raise the loading message
-        document.getElementById('text').innerHTML = 'Loading...';
-        document.getElementById('InnerFreezePane').className='On';
+        document.getElementById('text').innerHTML = '<?= $escaper->escapeHtml(__('Loading...')) ?>';
+        document.getElementById('InnerFreezePane').className='d-block';
         //Handle after 3D authentication second call
     }else{
         //Browser not supported
         //Place error handle code here
         document.getElementById('ErrorBox').innerHTML='Error: Browser not supported';
-        document.getElementById('ErrorBox').className='On'
+        document.getElementById('ErrorBox').className='d-block'
     }
 
 </script>
 
 <div id="Main">
+    <div class="h1 my-2 my-md-4"><?= /** @noEscape  */ __('Order #%1 Payment - eFarma.com', $block->getOrderId()) ?></div>
+    <!-- ErrorBox -->
+    <div id="ErrorBox" class="d-none"></div>
     <!-- Credit card form -->
     <form onsubmit="return CheckCC()">
-
-        <label for="CC">Card Number</label>
-        <input type="text" id="CC" autocomplete="off" maxlength="19" placeholder="XXXX XXXX XXXX XXXX" value="4012000000003028"/>
-
-        <label>Exipiry Date (MM/YY)</label>
-        <input type="text" id="EXPMM" autocomplete="off" maxlength="2" placeholder="MM" value="05" />
-        <input type="text" id="EXPYY" autocomplete="off" maxlength="2"  placeholder="YY" value="27" />
-        <label>Security code (Cvv2/4DBC)</label>
-        <input type="password" id="CVV2" maxlength="4" />
-        <label for="Name">Buyer Name</label>
-        <input type="text" id="Name" value="">
-        <label for="Email">Buyer Email</label>
-        <input type="email" id="Email" value="">
-
-        <input type="submit" value="Proceed" id="submit" />
+        <div class="fieldset row mx-n1">
+            <div class="col-12 field required">
+                <label class="label" for="CC"><span><?= /** @noEscape  */ __('Credit Card') ?></span></label>
+                <div class="control">
+                    <input autocomplete="off" id="CC" maxlength="19" placeholder="XXXX XXXX XXXX XXXX" type="text" class="input-text" title="<?= /** @noEscape  */ __('Credit Card') ?>" aria-required="true">
+                </div>
+            </div>
+            <div class="col-6 field required">
+                <label class="label" for="EXPMM"><span><?= /** @noEscape  */ __('Month') ?></span></label>
+                <div class="control">
+                    <input autocomplete="off" id="EXPMM" maxlength="2" placeholder="MM" type="text" class="input-text" title="<?= /** @noEscape  */ __('Month') ?>" aria-required="true">
+                </div>
+            </div>
+            <div class="col-6 field required">
+                <label class="label" for="EXPYY"><span><?= /** @noEscape  */ __('Year') ?></span></label>
+                <div class="control">
+                    <input autocomplete="off" id="EXPYY" maxlength="2" placeholder="YY" type="text" class="input-text" title="<?= /** @noEscape  */ __('Year') ?>" aria-required="true">
+                </div>
+            </div>
+            <div class="col-12 col-md-6 field required">
+                <label class="label" for="CVV2"><span><?= /** @noEscape  */ __('Security code (Cvv2/4DBC)') ?></span></label>
+                <div class="control">
+                    <input autocomplete="off" id="CVV2" maxlength="4" placeholder="1234" type="password" class="input-text" title="<?= /** @noEscape  */ __('Security code (Cvv2/4DBC)') ?>" aria-required="true">
+                </div>
+            </div>
+            <div class="col-12 col-md-6 field">
+                <label class="label" for="Name"><span><?= /** @noEscape  */ __('Buyer Name') ?></span></label>
+                <div class="control">
+                    <input autocomplete="off" id="Name" type="text" class="input-text" title="<?= /** @noEscape  */ __('Buyer Name') ?>" aria-required="true">
+                </div>
+            </div>
+            <div class="col-12 col-md-6 field">
+                <label class="label" for="Email"><span><?= /** @noEscape  */ __('Buyer Email') ?></span></label>
+                <div class="control">
+                    <input autocomplete="off" id="Email" type="text" class="input-text" title="<?= /** @noEscape  */ __('Buyer Email') ?>" aria-required="true">
+                </div>
+            </div>
+        </div>
+        <div class="text-right h5 mb-2"><?= /** @noEscape  */ __('Amount to pay') ?>: <div class="d-inline-block h3"><?= /** @noEscape  */ $block->getAmountToPay() ?></div></div>
+        <div class="actions col-12 text-right">
+            <button type="submit" id="submit" class="btn btn-primary btn-lg px-6">
+                <?= /** @noEscape */ __('Pay') ?>
+            </button>
+        </div>
     </form>
 </div>

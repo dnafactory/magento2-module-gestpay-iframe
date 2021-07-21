@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <body>
+        <block class="DNAFactory\BancaSellaProIframe\Block\Order\Info\Buttons\Pay" as="sales.order.info.buttons.pay.iframe" name="sales.order.info.buttons.pay.iframe" cacheable="false"/>
+    </body>
+</page>

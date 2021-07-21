@@ -2,42 +2,61 @@
 
 namespace DNAFactory\BancaSellaProIframe\Controller\Iframe;
 
-use DNAFactory\BancaSellaProIframe\Api\AxerveConfigurationInterface;
+use DNAFactory\BancaSellaProIframe\Exception\CryptedStringException;
+use DNAFactory\BancaSellaProIframe\Exception\InvalidOrderIdException;
+use DNAFactory\BancaSellaProIframe\Helper\Data;
+use Magento\Checkout\Model\Session;
 use Magento\Framework\App\Action\Action;
 use Magento\Framework\App\Action\Context;
 use Magento\Framework\App\Action\HttpGetActionInterface;
 use Magento\Framework\App\Action\HttpPostActionInterface;
-use Magento\Framework\Controller\ResultFactory;
-use Magento\Framework\Message\ManagerInterface;
-use Magento\Framework\Stdlib\CookieManagerInterface;
-use Magento\Sales\Api\OrderRepositoryInterface;
-use Magento\Framework\Stdlib\Cookie\CookieMetadataFactory;
 use Magento\Framework\Session\SessionManagerInterface;
+use Magento\Framework\Stdlib\Cookie\CookieMetadataFactory;
+use Magento\Sales\Api\OrderRepositoryInterface;
 
 class Response extends Action implements HttpGetActionInterface, HttpPostActionInterface
 {
-    protected CookieManagerInterface $cookieManager;
-    protected AxerveConfigurationInterface $axerveConfiguration;
+    const SUCCESS_PAGE_PATH = 'checkout/onepage/success';
+
+    /**
+     * @var OrderRepositoryInterface
+     */
     protected OrderRepositoryInterface $orderRepository;
+    /**
+     * @var CookieMetadataFactory
+     */
     protected CookieMetadataFactory $cookieMetadataFactory;
+    /**
+     * @var SessionManagerInterface
+     */
     protected SessionManagerInterface $sessionManager;
+    /**
+     * @var Session
+     */
+    protected Session $checkoutSession;
+    /**
+     * @var Data
+     */
+    protected Data $helper;
+    /**
+     * @var mixed
+     */
+    private $orderId;
 
     public function __construct(
+        Data $helper,
+        Session $checkoutSession,
         Context $context,
-        CookieManagerInterface $cookieManager,
         OrderRepositoryInterface $orderRepository,
-        AxerveConfigurationInterface $axerveConfiguration,
         CookieMetadataFactory $cookieMetadataFactory,
-        SessionManagerInterface $sessionManager,
-        ManagerInterface $messageManager
+        SessionManagerInterface $sessionManager
     ) {
         parent::__construct($context);
-        $this->cookieManager = $cookieManager;
-        $this->axerveConfiguration = $axerveConfiguration;
         $this->orderRepository = $orderRepository;
         $this->cookieMetadataFactory = $cookieMetadataFactory;
         $this->sessionManager = $sessionManager;
-        $this->messageManager = $messageManager;
+        $this->checkoutSession = $checkoutSession;
+        $this->helper = $helper;
     }
 
     /**
@@ -45,71 +64,85 @@ class Response extends Action implements HttpGetActionInterface, HttpPostActionI
      */
     public function execute()
     {
-        if (!$this->axerveConfiguration->isActive()) {
-            return $this->redirectError(__("Axerve disabled"));
-        }
-
-        $cryptedString = $this->getRequest()->getParam('crypted_string', null);
-        if (!$cryptedString) {
-            return $this->redirectError(__("Empty Encripted String"));
-        }
-
-        $shopLogin = $this->axerveConfiguration->getMerchantId();
-        $wsdl = $this->axerveConfiguration->getUrlWsdl();
-
-        $client = new \SoapClient($wsdl, ['exceptions' => true]);
-
-        $params = [
-            'shopLogin' => $shopLogin,
-            'CryptedString' => $cryptedString
-        ];
-
         try {
+            $this->helper->isIframeActive();
+
+            $cryptedString = $this->getRequest()->getParam('crypted_string', null);
+            if (!$cryptedString) {
+                throw new CryptedStringException();
+            }
+
+            $this->orderId = $this->helper->getCurrentOKey();
+            $shopLogin = $this->helper->getMerchantId();
+            $wsdl = $this->helper->getUrlWsdl();
+
+            $client = new \SoapClient($wsdl, ['exceptions' => true]);
+
+            $params = [
+                'shopLogin' => $shopLogin,
+                'CryptedString' => $cryptedString
+            ];
+
             $response = $client->Decrypt($params);
-        } catch (\SoapFault $e) {
-            return $this->redirectError($e->faultstring);
-        } catch (\Exception $e) {
-            return $this->redirectError($e->getMessage());
+            $result = simplexml_load_string($response->DecryptResult->any);
+            $errCode = (string) $result->ErrorCode;
+            $errDesc = (string) $result->ErrorDescription;
+
+            // Don't force triple check (===), never trust
+            if ($errCode != '0') {
+                throw new \Exception($errDesc);
+            }
+        } catch (\SoapFault $exception) {
+            return $this->helper->redirectWithError($exception->faultstring);
+        } catch (\Exception $exception) {
+            return $this->helper->redirectWithError($exception->getMessage());
         }
 
-        $result = simplexml_load_string($response->DecryptResult->any);
+        $this->helper->cleanCookie();
+        return $this->redirectToSuccessPage();
+    }
 
-        $errCode = (string) $result->ErrorCode;
-        $errorDescription = (string) $result->ErrorDescription;
-
-        if ($errCode != "0") {
-            $this->redirectError($errorDescription);
+    /**
+     * @return \Magento\Framework\Controller\ResultInterface
+     * @throws InvalidOrderIdException
+     */
+    protected function redirectToSuccessPage()
+    {
+        $result = $this->_setCheckoutSessionId();
+        if (!$result) {
+            throw new InvalidOrderIdException();
         }
 
-        $this->cleanCookie();
-        return $this->redirectSuccess();
+        return $this->helper->redirect(self::SUCCESS_PAGE_PATH);
     }
 
-    protected function cleanCookie()
+    /**
+     * @return bool
+     */
+    private function _setCheckoutSessionId()
     {
-        $this->cookieManager->deleteCookie('encString');
-        $this->cookieManager->deleteCookie('TransKey');
-        $this->cookieManager->deleteCookie('shopLogin');
-    }
+        try {
+            $order = $this->orderRepository->get($this->orderId);
+        } catch (\Exception $exception) {
+            return false;
+        }
 
-    protected function redirectError(string $error = '')
-    {
-        $this->cleanCookie();
+        if (!$this->checkoutSession->getLastSuccessQuoteId()) {
+            $this->checkoutSession->setLastSuccessQuoteId($order->getQuoteId());
+        }
 
-        $this->messageManager->addErrorMessage($error);
-        $redirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
-        $redirect->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0', true);
-        $redirect->setHttpResponseCode(302); // Prevent Browser Caching, don't remove
-        $redirect->setUrl('/checkout/cart');
-        return $redirect;
-    }
+        if (!$this->checkoutSession->getLastQuoteId()) {
+            $this->checkoutSession->setLastQuoteId($order->getQuoteId());
+        }
 
-    protected function redirectSuccess()
-    {
-        $redirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
-        $redirect->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0', true);
-        $redirect->setHttpResponseCode(302); // Prevent Browser Caching, don't remove
-        $redirect->setUrl('/bancasellaproiframe/iframe/success');
-        return $redirect;
+        if (!$this->checkoutSession->getLastOrderId()) {
+            $this->checkoutSession->setLastOrderId($order->getEntityId());
+        }
+
+        if (!$this->checkoutSession->getLastRealOrderId()) {
+            $this->checkoutSession->setLastRealOrderId($order->getEntityId());
+        }
+
+        return true;
     }
 }

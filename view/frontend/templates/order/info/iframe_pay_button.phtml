@@ -1,0 +1,11 @@
+<?php
+/** @var \DNAFactory\BancaSellaProIframe\Block\Order\Info\Buttons\Pay $block */
+/** @var \Magento\Framework\Escaper $escaper */
+?>
+
+<?php if ($block->showButton()) : ?>
+    <a href="<?= $escaper->escapeUrl($block->getPaymentUrl()) ?>"
+       title="<?= $escaper->escapeHtml(__('Pay with Axerve Iframe')) ?>">
+        <?= $escaper->escapeHtml(__('Pay with Axerve Iframe')) ?>
+    </a>
+<?php endif; ?>
