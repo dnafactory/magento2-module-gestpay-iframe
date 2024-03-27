@@ -251,6 +251,11 @@ class Data extends AbstractHelper
         return $this->axerveConfiguration->isTest();
     }
 
+    public function getApiKey()
+    {
+        return $this->axerveConfiguration->getApiKey();
+    }
+
     public function generateUrlToIframe($orderId)
     {
         return $this->url->getUrl(self::IFRAME_PATH, [

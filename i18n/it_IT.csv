@@ -1,0 +1,11 @@
+"Order #%1 Payment","Pagamento Ordine #%1",module,DNAFactory_BancaSellaProIframe
+"Credit Card","Carta di Credito",module,DNAFactory_BancaSellaProIframe
+"Month","Mese",module,DNAFactory_BancaSellaProIframe
+"Year","Anno",module,DNAFactory_BancaSellaProIframe
+"Security code (Cvv2/4DBC)","Codice di sicurezza (Cvv2/4DBC)",module,DNAFactory_BancaSellaProIframe
+"Buyer Name","Intestatario",module,DNAFactory_BancaSellaProIframe
+"Buyer Email","E-mail di contatto",module,DNAFactory_BancaSellaProIframe
+"Amount to pay","Totale da pagare",module,DNAFactory_BancaSellaProIframe
+"Pay","Paga",module,DNAFactory_BancaSellaProIframe
+"Loading...","Caricamento...",module,DNAFactory_BancaSellaProIframe
+"Payment in progress...","Pagamento in corso...",module,DNAFactory_BancaSellaProIframe

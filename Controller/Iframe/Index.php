@@ -57,7 +57,7 @@ class Index extends Action implements HttpGetActionInterface, HttpPostActionInte
         try {
             $this->helper->isIframeActive();
 
-            $pares = $this->getRequest()->getParam('PaRes', null);
+            $pares = $this->getRequest()->getParam('PaRes', '') ?? '';
 
             if (strlen($pares) > 0) {
                 return $this->helper->redirectToPayment();
@@ -80,14 +80,14 @@ class Index extends Action implements HttpGetActionInterface, HttpPostActionInte
             $shopLogin = $this->helper->getMerchantId();
             $wsdl = $this->helper->getUrlWsdl();
             $shopTransactionId = $order->getIncrementId();
-
+            $apiKey = $this->helper->getApiKey();
             ///////////////////////
             /// PZ8
             /// baseGrandTotal refer to base currency
             /// workaround to avoid currency mapping
             ///
             $amount = $order->getBaseGrandTotal();
-            $amount = number_format($amount, 2);
+            $amount = number_format($amount, 2, '.', '');
             $currency = $this->helper->getCurrency();
             ///
             ///////////////////////
@@ -98,7 +98,8 @@ class Index extends Action implements HttpGetActionInterface, HttpPostActionInte
                 'shopLogin' => $shopLogin,
                 'uicCode' => $currency,
                 'amount' => $amount,
-                'shopTransactionId' => $shopTransactionId
+                'shopTransactionId' => $shopTransactionId,
+                'apikey' => $apiKey
             ];
 
             $response = $client->Encrypt($params);

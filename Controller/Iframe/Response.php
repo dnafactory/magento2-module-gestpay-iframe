@@ -74,13 +74,15 @@ class Response extends Action implements HttpGetActionInterface, HttpPostActionI
 
             $this->orderId = $this->helper->getCurrentOKey();
             $shopLogin = $this->helper->getMerchantId();
+            $apiKey = $this->helper->getApiKey();
             $wsdl = $this->helper->getUrlWsdl();
 
             $client = new \SoapClient($wsdl, ['exceptions' => true]);
 
             $params = [
                 'shopLogin' => $shopLogin,
-                'CryptedString' => $cryptedString
+                'CryptedString' => $cryptedString,
+                'apikey' => $apiKey
             ];
 
             $response = $client->Decrypt($params);
